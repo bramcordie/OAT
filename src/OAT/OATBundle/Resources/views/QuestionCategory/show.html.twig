@@ -1,0 +1,112 @@
+{% extends "OATBundle::layout.html.twig" %}
+
+{% block scripts %}
+{{ parent() }}
+<script src="{{ asset('bundles/oat/scripts/jquery.tablesorter-min.js') }}" type="text/javascript"></script>
+{% endblock %}
+
+{% block content %}
+<div class="column10 prefix1 topfix1">
+    <h2>{{ category.name }}</h2>
+    <div class="admin-bar">
+        <a class="icon-link edit-link" href="{{ path('oat_oat_questioncategory_edit', { 'id': category.id }) }}">aanpassen</a>
+        <a class="icon-link add-link" href="{{ path('oat_oat_question_create') }}">vraag toevoegen</a>
+        <a class="icon-link print-link" href="{{ path('oat_oat_questioncategory_print', { 'id': category.id }) }}">print alles</a>
+        <a class="icon-link print-link" id="level-print" href="{{ path('oat_oat_questioncategory_print', { 'id': category.id }) }}">print geselecteerd niveau</a>
+        <a class="icon-link delete-link" href="{{ path('oat_oat_questioncategory_delete', { 'id': category.id }) }}">verwijderen</a>
+        <div class="delete-confirmation">
+            <p>U staat op punt deze categorie en al zijn bijhorende vragen definitief te verwijderen. Alle statistieken van de bevragingen waar deze categorie in voor komt zullen verdwijnen.</p>
+            <p>Bent u zeker dat u wilt doorgaan?
+            <a class="delete-confirmation-link" href="{{ path('oat_oat_questioncategory_delete', { 'id': category.id }) }}">Verwijderen bevestigen</a> of <a href="#" onclick="cancelDelete()">annuleren</a>.
+            </p>
+        </div>
+    </div>
+    
+    {% if category.questions|length > 0 %}
+    <p>Sorteren is mogelijk door op de kolom hoofding te klikken. Shift-klik op meerdere kolommen om deze tegelijk te sorteren. Gebruik ctrl/cmd + F om te zoeken.</p>
+    
+    <ul class="tabrow" id="level-nav">
+        {% for level, count in levelCounter %}
+        {% if level == 0 %}
+        <li class="selected">Alle niveaus (#{{ count }})</li>
+        {% else %}
+        <li>Niveau {{ level }} (#{{ count }})</li>
+        {% endif %}
+        {% endfor %}
+    </ul>
+    
+    <table id="question-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Niveau</th>
+            <th>Beschrijving</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for question in category.questions %}
+          <tr>
+            <td>
+                <a href="{{ path('oat_oat_question_show', { 'id': question.id }) }}">
+                {{ question.id }}
+                </a>
+            </td>
+            <td>{{ question.level }}</td>
+            <td>{{ question.description }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+     </table>
+    {% else %}
+    <p>Er zijn nog geen vragen toegevoegd aan deze categorie.</p>
+    {% endif %}
+</div>
+
+<script type="text/javascript">
+    $(function() {
+        var selectedLevel = 0;
+        initLevelNav();
+        $("#question-table").tablesorter(); 
+        initDelete();
+        
+    }); 
+    
+    function initLevelNav(){
+        $("#level-nav li").click(function(e) {
+          e.preventDefault();
+          selectedLevel = $(this).index();
+          $("#level-print").attr("href", "{{ path('oat_oat_questioncategory_print', { 'id': category.id }) }}/"+selectedLevel);
+          $("#level-nav li").removeClass("selected");
+          $(this).addClass("selected");
+          filterLevelTable(selectedLevel);
+	});
+    }
+    
+    function filterLevelTable(level){
+        if(level > 0){ 
+        $("table#question-table tbody tr")
+            .hide()
+            .filter(
+                function(){
+                    if ($(this).find('td:nth-child(2)').text() == level){
+                        return this;
+                    }
+                })
+            .show();
+        }else{
+            $("table#question-table tbody tr").show();
+        }
+    }
+    
+    function cancelDelete(){
+       $(".delete-confirmation").slideUp();
+   }
+   
+   function initDelete(){
+       $(".delete-link").removeAttr("href")
+       $(".delete-link").click( function(){
+            $(".delete-confirmation").slideToggle();  
+       });
+   }
+</script>
+{% endblock %}

@@ -1,0 +1,175 @@
+{% extends "OATBundle::layout.html.twig" %}
+
+{% block scripts %}
+{{ parent() }}
+<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+{% endblock %}
+
+{% block content %}
+<div class="column10 prefix1 topfix1">
+   <h2>Vraag Aanmaken</h2>
+</div>
+
+{% if edit is defined %}
+<form action="{{ path('oat_oat_question_edit', { 'id': form.vars.value.id }) }}" method="post" {{ form_enctype(form) }}>
+{% else %}
+<form action="{{ path('oat_oat_question_create') }}" method="post" {{ form_enctype(form) }}>    
+{% endif %}
+<div class="column5 prefix1 topfix1">
+    {{ form_errors(form) }}
+
+    <div class="form-element">
+        {{ form_row(form.description) }}
+    </div>
+        
+    <div class="form-element">
+        Categorie
+        {{ form_widget(form.category, { 'separator': '=====' }) }}
+    </div>
+        
+    <div class="form-element">
+       {{ form_row(form.level) }}
+    </div>
+    
+    <div id="QuestionText" class="form-element ">
+        {{ form_row(form.questionText) }}
+    </div>
+    
+</div>
+        
+<div class="column4 prefix1 topfix1">
+    
+    <input type="button" value="extra antwoord" onclick="addAnswer()">
+    <ol id="answers">
+    {% if answers %}
+    {% set iAnswer = 0 %}
+    {% for answer in answers %}
+            {% if iAnswer == 0 %}
+            <li class="form-element right-answer">
+               <div class="name">
+                   <label for="answer-0}">Juiste Antwoord</label>
+               </div>
+                <div class="field">
+                    <textarea name="answer-0" cols=40 rows=6>{{ answer.answerText }}</textarea>
+                </div>
+            </li>
+            {% else %}
+            <li class="form-element wrong-answer">
+               <div class="name">
+                   <label for="answer-{{ iAnswer }}">foute Antwoord {{ iAnswer }}</label>
+               </div>
+                <div class="field">
+                    <textarea name="answer-{{ iAnswer }}" cols=40 rows=6>{{ answer.answerText }}</textarea>
+                </div>
+            </li>
+            {% endif %}
+    {% set iAnswer = iAnswer + 1 %}
+    {% endfor %}
+    {% else %}
+    <li class="form-element right-answer">
+        <div class="name">
+            <label for="answer-0">Juiste Antwoord</label>
+        </div>
+        <div class="field">
+            <textarea name="answer-0" cols=40 rows=6></textarea>
+        </div>
+    </li>
+
+    <li class="form-element wrong-answer">
+        <div class="name">
+            <label for="answer-1">Fout Antwoord 1</label>
+        </div>
+        <div class="field">
+            <textarea name="answer-1" cols=40 rows=6></textarea>
+        </div>
+    </li>
+
+    <li class="form-element wrong-answer">
+        <div class="name">
+            <label for="answer-2">Fout Antwoord 2</label>
+        </div>
+        <div class="field">
+            <textarea name="answer-2" cols=40 rows=6></textarea>
+        </div>
+    </li>
+    {% endif %}
+   </ol>
+    {{ form_rest(form) }}
+    
+    {% if edit is defined%}
+<input type="submit" value="vraag aanpassen"/>
+{% else %}
+<input type="submit" value="vraag aanmaken"/> 
+{% endif %}
+    
+</div>
+</form>
+
+<div id="question-wrapper">
+    <div id="question-area" class="column7 prefix1 topfix1">
+        Your question goes here.
+    </div>
+
+    <div id="answer-area" class="column3 topfix1">
+        <span class="area-header">Antwoorden</span>
+        <ul id="answers">
+            <li>
+                <input id="answer-1" type="radio" name="answers" value="X">
+                <label for="answer-1">answer one goes here</label>
+            </li>
+            <li>
+                <input id="answer-2" type="radio" name="answers" value="X">
+                <label for="answer-2">answer two goes here</label>
+            </li>
+            <li>
+                <input id="answer-3" type="radio" name="answers" value="X">
+                <label for="answer-3">answer three goes here</label>
+            </li>
+        </ul>
+        <input type="button" id="submit-answer" value="controleer antwoord" onclick="">
+    </div>
+</div>
+
+<script type="text/javascript">
+    
+   function addAnswer()
+   {
+       var answerCounter = $("ol#answers li").size();
+       $("ol#answers").append("<li class=\"form-element wrong-answer\"><div class=\"name\"><label for=\"answer-"+answerCounter+"\">Fout Antwoord "+answerCounter+"</label></div><div class=\"field\"><textarea name=\"answer-"+answerCounter+"\" cols=40 rows=6></textarea></div></li>");
+   }
+   
+   function updatePreview()
+   {
+        //update question
+        $("#question-area").html($("#QuestionText textarea").val());
+        
+        //update answers
+        $("ol#answers li").each(function() {
+           var questionNr = $("ol#answers li").index($(this));
+           var question = $("textarea", this).val();
+           $("ul#answers li label").eq(questionNr).html(question);
+        });
+
+        //Jax it!
+        var math = document.getElementById("question-wrapper");
+        MathJax.Hub.Queue(["Typeset", MathJax.Hub, math]);
+    }
+   
+   $(document).ready((function () {
+       
+       updatePreview();
+       
+       $("#QuestionText textarea").bind('keydown keypress', function () {
+           setTimeout(function () {
+               updatePreview();
+           }, 0);
+       });
+
+       $(".right-answer, .wrong-answer").bind('keydown keypress', function () {
+           setTimeout(function () {
+               updatePreview();
+           }, 0);
+       });
+   }));
+</script>
+{% endblock %}

@@ -1,0 +1,51 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+<header>
+    <script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+    <style>
+    .question{
+        width: 50%;
+        display: inline-block;
+        float: left;
+    }
+    
+    .answers{
+        margin-left: 5%;
+        width: 45%;
+        display: inline-block;
+        float: left;
+    }
+    
+    h2{
+        clear: both;
+    }
+    
+    img{
+    max-width: 100%;
+    }
+    </style>
+</header>
+
+<body>
+    <h1>Categorie: {{ category.name }}</h1>
+    {% for question in questions %}
+        <h2>Vraag nr.{{ question.id }}: {{ question.description }}</h2>
+        {% autoescape false %}
+        <div class="question"> {{ question.questionText }} </div>
+        {% endautoescape %}
+        <div class="answers">
+        <span>antwoorden</span>
+        <ol>
+            {% for answer in question.answers %}
+            <li>
+            {% autoescape false %}
+            {{ answer.answerText }}
+            {% endautoescape %} 
+            </li>    
+            {% endfor %}
+        </ol>
+        </div>
+    {% endfor %}
+</body>
+</html>

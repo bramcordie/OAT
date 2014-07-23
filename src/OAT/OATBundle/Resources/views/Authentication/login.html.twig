@@ -1,0 +1,25 @@
+{% extends "OATBundle::layout.html.twig" %}
+
+{% block content %}
+<div class="column5 prefix3_5 topfix1">
+    <h2>Aanmelden</h2>
+    
+    {% if error %}
+        <div class="error">Gebruikersnaam of wachtwoord onjuist.</div>
+    {% endif %}
+
+        <form action="{{ path('login_check') }}" method="post">
+            <div class="form-element">
+            <label for="username">Gebruikersnaam:</label>
+            <input type="text" id="username" name="_username" value="{{ last_username }}" />
+            </div>
+            
+            <div class="form-element">
+            <label for="password">Wachtwoord:</label>
+            <input type="password" id="password" name="_password" />
+            </div>
+
+            <input type="submit" value="aanmelden"/>
+        </form>
+    </div>
+{% endblock %}

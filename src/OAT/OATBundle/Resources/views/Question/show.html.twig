@@ -1,0 +1,69 @@
+{% extends "OATBundle::layout.html.twig" %}
+
+{% block scripts %}
+{{ parent() }}
+<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+{% endblock %}
+
+{% block content %}
+<div class="column10 prefix1 topfix1">
+    <h2> Vraag nr{{ question.id }} - {{ question.description }}</h2>
+    <div class="admin-bar">
+        <a class="icon-link edit-link" href="{{ path('oat_oat_question_edit', { 'id': question.id }) }}">aanpassen</a>
+        <a class="icon-link delete-link" href="{{ path('oat_oat_question_delete', { 'id': question.id }) }}">verwijderen</a>
+        <div class="delete-confirmation">
+        U staat op punt deze vraag en zijn bijhorende antwoorden definitief te verwijderen. Bent u zeker dat u wilt doorgaan?
+        <a class="delete-confirmation-link" href="{{ path('oat_oat_question_delete', { 'id': question.id }) }}">Verwijderen bevestigen</a> of <a onclick="cancelDelete()">annuleren</a>.
+        </div>
+    </div>
+    <p>Categorie: <a href="{{ path('oat_oat_questioncategory_show', { 'id': question.category.id }) }}">{{ question.category.name }}</a><br/>
+    Niveau: {{ question.level }}<br/>
+    #juist: {{ question.rightAnswers }}<br/>
+    #fout: {{ question.wrongAnswers }}
+    </p>
+    <p>Hieronder een voorbeeld van hoe deze vraag er zal uitzien tijdens een bevraging. <strong>In dit voorbeeld is het eerste antwoord het juiste, tijdens een echte bevraging worden de antwoorden in willekeurige volgorde weergeven.</strong></p>
+</div>
+
+<div id="question-wrapper">
+    <div id="question-area" class="column7 prefix1 topfix1">
+    {% autoescape false %} 
+    {{ question.questionText }}
+    {% endautoescape %}
+        </div>
+
+        <div class="column3 prefix1 topfix1">
+            <div id="answer-area">
+            <span class="area-header">Antwoorden</span>
+            <ul id="answers">
+        {% for answer in question.answers %}
+                    <li>
+                        <input id="answer-{{ answer.id }}" type="radio" name="answers" value="{{ answer.id }}">
+                        <label for="answer-{{ answer.id }}">{{ answer.answerText }}</label>
+                    </li>
+        {% endfor %}
+                </ul>
+
+                <input type="button" id="submit-answer" value="controleer antwoord" onclick="submitAnswer()">
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+    
+   function cancelDelete(){
+       $(".delete-confirmation").slideUp();
+   }
+   
+   function initDelete(){
+       $(".delete-link").removeAttr("href")
+       $(".delete-link").click( function(){
+            $(".delete-confirmation").slideToggle();  
+       });
+   }
+   
+   $(document).ready((function () {
+       var math = document.getElementById("question-area");
+       MathJax.Hub.Queue(["Typeset", MathJax.Hub, math]);
+       initDelete();
+    }));
+</script>
+{% endblock %}

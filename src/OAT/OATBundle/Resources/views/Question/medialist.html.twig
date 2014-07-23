@@ -1,0 +1,45 @@
+{% extends "OATBundle::layout.html.twig" %}
+
+{% block content %}
+
+<div id="media-clipper">
+    <p>Copiëer onderstaande HTML-tag naar het vraagveld om deze afbeelding te gebruiken</p>
+    <p class="clip"></p>
+    <a href="#" onclick="closeClipper()">venster sluiten</a>
+</div>
+
+<div class="column10 prefix1 topfix1">
+    <h2>Afbeelding Overzicht</h2>
+    <div class="admin-bar">
+        <a class="icon-link add-link" href="{{ path('oat_oat_question_mediaupload') }}">afbeelding uploaden</a>
+    </div>
+    <p>Klik op een afbeelding om een HTML-tag te genereren die je kan gebruiken in een vraag.</p>
+    {% for mediaitem in media %}
+    <div class="media" id="{{ mediaitem.webPath }}">
+        <span class="description">{{ mediaitem.description }}</span>
+        <img class="preview" src="/web/{{ mediaitem.webPath }}" />
+    </div>
+    {% endfor %}
+</div>
+
+<script type="text/javascript">
+    $(function() {
+        $("#media-clipper").hide();
+        
+        $(".media").click(function(){
+            clipMedia($(this).attr("id"));
+        });
+    });
+    
+    function closeClipper(){
+        $("#media-clipper").fadeOut();
+    }
+    
+    function clipMedia(mediaPath)
+    {
+        //only image clipping possible atm
+        $("#media-clipper").children(".clip").text("<img src=\"/web/" + mediaPath + "\" />");
+        $("#media-clipper").fadeIn();
+    }
+</script>
+{% endblock %}

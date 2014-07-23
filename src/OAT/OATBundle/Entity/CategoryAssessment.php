@@ -1,0 +1,364 @@
+<?php
+
+namespace OAT\OATBundle\Entity;
+
+use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
+use Doctrine\Common\Collections\ArrayCollection;
+
+/**
+ * An assessment with his collection of randomly selected questions about a certain category.
+ * 
+ * @ORM\Entity(repositoryClass="OAT\OATBundle\Repository\AssessmentRepository")
+ * @ORM\Table(name="categoryassessment")
+ */
+class CategoryAssessment {
+
+    /**
+     * id
+     *
+     * @ORM\Id
+     * @ORM\Column(type="integer")
+     * @ORM\GeneratedValue(strategy="AUTO")
+     */
+    protected $id;
+
+    /**
+     * status
+     *
+     * @ORM\Column(type="integer")
+     */
+    protected $status = 0;
+
+    /**
+     * creation date
+     * 
+     * @ORM\Column(type="datetime")
+     */
+    protected $created = 0;
+    
+    /**
+     * wrong answer counter
+     *
+     * @ORM\Column(type="integer")
+     */
+    protected $levelWrong = 0;
+
+    /**
+     * right answer counter
+     *
+     * @ORM\Column(type="integer")
+     */
+    protected $levelRight = 0;
+
+    /**
+     * level
+     *
+     * @ORM\Column(type="integer")
+     */
+    protected $level = 1;
+
+    /**
+     * questions
+     *
+     * @ORM\OneToMany(targetEntity="AssessmentQuestion" , mappedBy="assessment", cascade={"persist", "remove"})
+     */
+    protected $questions;
+
+    /**
+     * category
+     *
+     * @ORM\ManyToOne(targetEntity="QuestionCategory")
+     */
+    protected $category;
+
+    /**
+     * Constructor
+     *
+     * A category assessment requires a question category to be created.
+     *
+     * @param   $category   The question category of this assessment.
+     */
+    public function __construct($category) {
+        $this->questions = new ArrayCollection();
+        $this->setCategory($category);
+        $this->setCreated(new \DateTime("now"));
+    }
+    
+    /**
+     * Seed questions
+     *
+     * Seeds the CatergoryAssessments with a random collection of 10 questions for each level.
+     * 
+     * @param type $db
+     * @return boolean  If there are not enough questions of QuestionCategory are available false will be returned.
+     */
+    public function seedQuestions($db)
+    {
+        for ($level = 1; $level <= 3; $level++) {
+             $questions = $db->getRepository('OATBundle:Question')
+                             ->findBy(Array('level' => $level, 'category' => $this->getCategory()->getId()));
+            shuffle($questions);
+            $sufficientQuestions = true;
+            for ($i = 1; $i <= 10 && $sufficientQuestions; $i++) {
+                $listIndex = (($level - 1)*10) + $i;
+                if(isset($questions[$i-1])){
+                    $this->addQuestion(new AssessmentQuestion($this, $questions[$i-1], $listIndex));
+                }else{
+                    $sufficientQuestions = false;
+                }
+            }
+        }
+        
+        return $sufficientQuestions;
+    }
+
+    /**
+     * Get id
+     *
+     * @return integer 
+     */
+    public function getId() {
+        return $this->id;
+    }
+
+    /**
+     * Set status
+     *
+     * @param integer $status
+     */
+    public function setStatus($status) {
+        $this->status = $status;
+    }
+
+    /**
+     * Get status
+     *
+     * @return integer 
+     */
+    public function getStatus() {
+        return $this->status;
+    }
+
+    /**
+     * Set category
+     *
+     * @param OAT\OATBundle\Entity\QuestionCategory $category
+     */
+    public function setCategory(\OAT\OATBundle\Entity\QuestionCategory $category) {
+        $this->category = $category;
+    }
+
+    /**
+     * Get category
+     *
+     * @return OAT\OATBundle\Entity\QuestionCategory 
+     */
+    public function getCategory() {
+        return $this->category;
+    }
+
+    /**
+     * Process answer
+     *
+     * Checks the users answers to the current question and sends back feedback and the next question if available.
+     * 
+     * @param   int     $answerID   The ID of the user's answer to the current question.
+     * @return  mixed[]             Array containing feedback about the current state of the assessment.
+     */
+    public function processAnswer($answerID) {
+        // prevent changes if the assessment has a status other than 0.
+        if ($this->getStatus() != 0) {
+            $feedback['status'] = $this->getStatus();
+            // This assessment shouldn't be changed or accessed, jump out of the function!
+            return $feedback;
+        } else {
+            $feedback = Array('access' => true, 'isCorrect' => false, 'levelUp' => false, 'hasNext' => true);
+        }
+        
+        if ($this->getCurrentQuestion()->checkAnswer($answerID)) {
+            $feedback['isCorrect'] = true;
+            $feedback['rightAnswer'] = $answerID;
+            $feedback['progressCounter'] = $this->getLevelRight();
+            //returns true if leveled up
+            if ($this->oneUp()) {
+                $feedback['levelUp'] = true;
+            }
+        } else {
+            $feedback['progressCounter'] = $this->getLevelWrong();
+            $feedback['rightAnswer'] = $this->getCurrentQuestion()->getRightAnswer()->getId();
+            //returns true is game over
+            if ($this->oneDown()) {
+                $feedback['hasNext'] = false;
+            }
+        }
+
+        $feedback['status'] = $this->getStatus();
+        return $feedback;
+    }
+
+    /**
+     * Get current question
+     *
+     * Returns the current question if one's available else returns null.
+     * 
+     * @return OAT\OATBundle\Entity\Question|null Returns the current question if one's available else returns null.
+     */
+    public function getCurrentQuestion() {
+        $levelIndex = $this->levelRight + $this->levelWrong;
+        $questionIndex = (($this->level - 1) * 10) + $levelIndex +1;
+        $questions = $this->getQuestions();
+        $currentQuestion = null;
+        foreach ($questions as $question) {
+            if ($question->getListIndex() == $questionIndex) {
+                $currentQuestion = $question->getQuestion();
+            }
+        }
+        return $currentQuestion;
+    }
+    
+    /**
+     * One up
+     *
+     * Up the right answer counter for this level and check for level up's.
+     * 
+     * @return boolean Returns true if leveled up and the assessment isn't finished.
+     */
+    public function oneUp() {
+        $maxLevel = 3;
+        $this->levelRight++;
+        if ($this->levelRight == 5 && $this->level <= $maxLevel) {
+            $this->level++;
+            if ($this->level > $maxLevel) {
+                $this->level = $maxLevel;
+                $this->status = 1;
+                return false;
+            } else {
+                $this->levelRight = 0;
+                $this->levelWrong = 0;
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * One down
+     *
+     * Up the wrong answer counter for this level and end the assessment if the maximum wrong answers has been exceeded.
+     * 
+     * @return boolean Returns true if the assessment is over.
+     */
+    public function oneDown() {
+        $this->levelWrong++;
+        if ($this->levelWrong > 4) {
+            $this->level = $this->level - 1;
+            $this->status = 1;
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Set level
+     *
+     * @param integer $level
+     */
+    public function setLevel($level) {
+        $this->level = $level;
+    }
+
+    /**
+     * Get level
+     *
+     * @return integer 
+     */
+    public function getLevel() {
+        return $this->level;
+    }
+
+    /**
+     * Set levelWrong
+     *
+     * @param integer $levelWrong
+     */
+    public function setLevelWrong($levelWrong) {
+        $this->levelWrong = $levelWrong;
+    }
+
+    /**
+     * Get levelWrong
+     *
+     * @return integer 
+     */
+    public function getLevelWrong() {
+        return $this->levelWrong;
+    }
+
+    /**
+     * Set levelRight
+     *
+     * @param integer $levelRight
+     */
+    public function setLevelRight($levelRight) {
+        $this->levelRight = $levelRight;
+    }
+
+    /**
+     * Get levelRight
+     *
+     * @return integer 
+     */
+    public function getLevelRight() {
+        return $this->levelRight;
+    }
+
+    /**
+     * Add questions
+     *
+     * @param OAT\OATBundle\Entity\AssessmentQuestion $questions
+     */
+    public function addQuestion(\OAT\OATBundle\Entity\AssessmentQuestion $questions) {
+        $this->questions[] = $questions;
+    }
+
+    /**
+     * Get questions
+     *
+     * @return Doctrine\Common\Collections\Collection 
+     */
+    public function getQuestions() {
+        return $this->questions;
+    }
+
+
+    /**
+     * Add questions
+     *
+     * @param OAT\OATBundle\Entity\AssessmentQuestion $questions
+     */
+    public function addAssessmentQuestion(\OAT\OATBundle\Entity\AssessmentQuestion $questions)
+    {
+        $this->questions[] = $questions;
+    }
+
+    /**
+     * Set created
+     *
+     * @param datetime $created
+     */
+    public function setCreated($created)
+    {
+        $this->created = $created;
+    }
+
+    /**
+     * Get created
+     *
+     * @return datetime 
+     */
+    public function getCreated()
+    {
+        return $this->created;
+    }
+}

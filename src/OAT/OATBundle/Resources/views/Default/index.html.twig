@@ -1,0 +1,16 @@
+{% extends "OATBundle::layout.html.twig" %}
+
+{% block content %}
+<div class="column10 prefix1 topfix1">
+    <h2>Welkom op de Online Assessment Tool</h2>
+    
+    <p>
+    Met deze tool kan je bepalen of je voldoende voorkennis hebt om een opleiding aan het departement Gezondheidszorg en Technologie te starten. Afhankelijk van de opleiding(en) die je van plan bent te volgen, wordt er een online bevraging gegenereerd. Nadat deze bevraging doorlopen is krijg je een overzicht te zien van het behaalde resultaat.</p>
+    
+    <p>De resultaten van deze tool mogen niet als enige referentie gebruikt worden bij het kiezen van een geschikte opleiding.</p>
+    
+    <p>Deze tool is puur zelf-evaluatie en het is de bedoeling dat je berust op parate kennis bij het invullen van een bevraging. Het gebruik van hulpmiddelen is niet uitgesloten maar wees eerlijk voor jezelf.</p>
+    
+    <p><a href="{{ path('oat_oat_assessment_select') }}">Klik hier</a> of op de link bovenaan om een bevraging te starten.</p>
+</div>
+{% endblock %}

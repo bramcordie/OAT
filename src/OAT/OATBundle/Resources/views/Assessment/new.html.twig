@@ -1,0 +1,248 @@
+{% extends "OATBundle::layout.html.twig" %}
+
+{% block scripts %}
+{{ parent() }}
+<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+<script src="{{ asset('bundles/oat/scripts/prettify.js') }}" type="text/javascript"></script>
+{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<link rel="stylesheet" href="{{ asset('bundles/oat/css/prettify.css') }}" type="text/css" media="all" />
+{% endblock%}
+
+{% block content %}
+
+<div id="assessment-info">
+    je test nu: <span id="category-name">{{ Assessment.currentCategoryAssessment.category.name }}</span>
+</div>
+
+<div id="assessment-status">
+    <span id="assessment-progress">Categorie: <span id="category-counter">1</span>/{{ Assessment.questionCategories | length }}</span>
+</div>
+
+
+<div id="assessment-status-bar">
+
+    <ul id="level-progress">
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li class="hide"></li>
+        <div id="current-level-box">
+            Niveau
+            <span id="current-level">1</span>
+        </div>
+        <li class="hide"></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+    </ul>
+</div>
+<div id="question-wrapper">
+    <div id="question-area" class="column7 prefix1 topfix1">
+        {% autoescape false %}
+        {{ FirstQuestion.questionText }}
+        {% endautoescape %}
+        </div>
+
+        <div class="column3 prefix1 topfix1">
+            <div id="answer-area">
+                <span class="area-header">Antwoorden</span>
+                <ul id="answers">
+            {% for answer in FirstQuestion.answers %}
+                        <li>
+                            <input id="answer-{{ answer.id }}" type="radio" name="answers" value="{{ answer.id }}">
+                            <label for="answer-{{ answer.id }}">{{ answer.answerText }}</label>
+                        </li>
+            {% endfor %}
+                    </ul>
+
+                    <input type="button" id="submit-answer" value="controleer antwoord" onclick="submitAnswer()">
+                </div>
+            </div>
+        </div>
+
+        <script type="text/javascript">
+
+       var assessmentID = {{ Assessment.id }};
+       var questionID = {{ FirstQuestion.id }};
+       var level = 1;
+       var lastResponse;
+
+       function submitAnswer()
+       {
+           var answerID = $('input[name=answers]:checked', '#answers').val();
+           if(answerID){
+               $("#submit-answer").attr("disabled", "disabled");
+               $.ajax({
+                   url: "{{ path('oat_oat_assessment_checkanswer') }}",
+                   type: "POST",
+                   data: "questionID="+questionID+"&answerID="+answerID+"&assessmentID="+assessmentID
+               }).done(function(jsonResponse) {
+
+                           markRightAnswer(jsonResponse.feedback.category.rightAnswer);
+                           updateProgress(jsonResponse.feedback.category);
+                           lastResponse = jsonResponse;
+                           $("#submit-answer").attr("value", "volgende vraag");
+                           $("#submit-answer").attr("onclick", "nextQuestion()");
+                           $("#submit-answer").removeAttr("disabled");
+                           //IE bug: Cursor is stuck as loading until it gets moved
+                           //IE versions: 9 and below
+                           //IE fix: force the cursor back to pointer and define the cursor as important in the css file
+                           $("#submit-answer").css("cursor","pointer");
+                       });
+           }
+       }
+
+       function nextQuestion()
+       {
+           $("#submit-answer").attr("disabled", "disabled");
+           if(lastResponse.feedback.newCategory){
+               resetCategory(lastResponse.feedback.catName);
+               $('#level-progress').effect("shake", { times:4 }, 100);
+           }
+           if(lastResponse.feedback.category.status == 0){
+               setQuestion(lastResponse.nextQuestion);
+           }
+           else {
+               gameOver();
+           }
+       }
+
+       function markRightAnswer(answerID)
+       {
+           $("#answer-"+answerID).parent().addClass("right-answer");
+       }
+
+       function resetCategory($name)
+       {
+           level = 1;
+           $('#current-level').html(level);
+           $('ul#level-progress li').removeClass('wrong');
+           $('ul#level-progress li').removeClass('right');
+           $('#category-name').effect("transfer", { to: $('#category-counter') }, 1000);
+           $('#category-name').html($name);
+           var categoryCounter = parseInt($('#category-counter').html()) + 1;
+           $('#category-counter').html(categoryCounter);
+       }
+
+       function updateProgress(feedback)
+       {
+           if(feedback.isCorrect)
+           {
+               if(!feedback.levelUp && feedback.status == 0){
+                   $('ul#level-progress li').eq(feedback.progressCounter).addClass('right');
+                   $('ul#level-progress li').eq(feedback.progressCounter).effect("bounce", { times:3 }, 300);
+               }
+           }else
+           {
+               if(feedback.hasNext){
+                   $('ul#level-progress li').eq(9-feedback.progressCounter).addClass('wrong');
+                   $('ul#level-progress li').eq(9-feedback.progressCounter).effect("bounce", { times:3, direction:"down"}, 300);
+               }
+           }
+
+           if(feedback.levelUp && feedback.status == 0)
+           {
+               levelUp();
+           }
+
+       }
+
+       function gameOver()
+       {
+           if(!lastResponse.feedback.category.isCorrect){
+               var displayLevel = level-1;
+               $('#current-level').html(displayLevel);
+               $('#current-level-box').effect("bounce", { times:3, direction:"down"}, 300);
+           }
+
+           $('#question-wrapper').html('<div class=\"column10 prefix1 topfix1\"><p>Je bent klaar met de bevraging, even geduld en we tonen je het resultaat.</p></div>');
+           setTimeout(function(){
+               window.location.href = "{{ path('oat_oat_assessment_survey', { 'assessmentID': Assessment.id }) }}";
+           }, 4000);
+       }
+
+       function levelUp()
+       {
+           level++;
+           $('#current-level').html(level);
+           $('#current-level-box').effect("bounce", { times:3 }, 300);
+
+           $('ul#level-progress li').removeClass('wrong');
+           $('ul#level-progress li').removeClass('right');
+       }
+
+       function setQuestion(question){
+           $('#question-wrapper').fadeToggle("slow", function () {
+               $('#question-area').html(question.questionText);
+               $('#answers').html('');
+               $.each(question.answers, function(answerID, answerText) {
+                   $('#answers').append('<li><input id="answer-'+answerID+'" type="radio" name="answers" value="'+answerID+'"><label for="answer-'+answerID+'">'+answerText+'</label></li>');
+               });
+               $('ul#answers li').shuffle();
+               jaxThis();
+               prettifyThis();
+
+               questionID = question.id;
+               $("#submit-answer").attr("value", "controleer antwoord");
+               $("#submit-answer").attr("onclick", "submitAnswer()");
+
+               $('#question-wrapper').fadeToggle("slow", function (){
+                   $('ul#answers li:first input').focus();
+                   $("#submit-answer").removeAttr("disabled");
+                   //IE bug: Cursor is stuck as loading untill it gets moved
+                   //IE versions: 9 and below
+                   //IE fix: force the cursor back to pointer and define the cursor as important in the css file
+                   $("#submit-answer").css("cursor","pointer");
+               });
+
+           });
+
+       }
+
+       function jaxThis(){
+           var jaxMe = document.getElementById("question-area");
+           MathJax.Hub.Queue(["Typeset", MathJax.Hub, jaxMe]);
+           jaxMe = document.getElementById("answers");
+           MathJax.Hub.Queue(["Typeset", MathJax.Hub, jaxMe]);
+       }
+
+       function prettifyThis(){
+           $("code").addClass("prettyprint");
+           prettyPrint();
+       }
+
+       (function($){
+           $.fn.shuffle = function() {
+
+               var allElems = this.get(),
+                       getRandom = function(max) {
+                           return Math.floor(Math.random() * max);
+                       },
+                       shuffled = $.map(allElems, function(){
+                           var random = getRandom(allElems.length),
+                                   randEl = $(allElems[random]).clone(true)[0];
+                           allElems.splice(random, 1);
+                           return randEl;
+                       });
+
+               this.each(function(i){
+                   $(this).replaceWith($(shuffled[i]));
+               });
+
+               return $(shuffled);
+
+           };})(jQuery);
+
+       $(document).ready((function () {
+           jaxThis();
+           prettifyThis();
+           $('ul#answers li').shuffle();
+           $('ul#answers li:first input').focus();
+       }));
+            </script>
+{% endblock %}

@@ -1,0 +1,24 @@
+security:
+    encoders:
+        Symfony\Component\Security\Core\User\User: plaintext
+
+    role_hierarchy:
+        ROLE_LECTOR:      ROLE_USER
+        ROLE_ADMIN:       [ROLE_USER, ROLE_LECTOR]
+
+    providers:
+        in_memory:
+            users:
+                user:  { password: userpass, roles: [ 'ROLE_USER' ] }
+                admin: { password: oatadmin420, roles: [ 'ROLE_ADMIN' ] }
+
+    firewalls:
+        secured_area:
+            pattern:    ^/
+            anonymous: ~
+            http_basic:
+                realm: "Secured Admin Area"
+            logout: ~
+            form_login:
+                login_path:  /login
+                check_path:  /login_check

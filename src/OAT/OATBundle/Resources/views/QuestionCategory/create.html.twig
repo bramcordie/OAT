@@ -1,0 +1,20 @@
+{% extends "OATBundle::layout.html.twig" %}
+
+{% block content %}
+<div class="column10 prefix1 topfix1">
+    <h2>Categorie Aanmaken</h2>
+    {{ form_errors(form) }}
+
+    <form action="{{ path('oat_oat_questioncategory_create') }}" method="post" {{ form_enctype(form) }}>  
+
+    <div class="form-element">
+    <label for="form_name">Categorienaam</label>
+    {{ form_errors(form.name) }}
+    {{ form_widget(form.name) }}
+    </div>
+
+    {{ form_rest(form) }}
+    <input type="submit" value="categorie aanmaken"/>
+    </form>
+</div>
+{% endblock %}

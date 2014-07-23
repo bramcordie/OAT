@@ -1,0 +1,52 @@
+{% extends "OATBundle::layout.html.twig" %}
+
+{% block content %}
+<div class="column10 prefix1 topfix1">
+    <h2>Live Statistieken</h2>
+    <p>
+    Vragen wijken af naar links of rechts afhankelijk van het aantal keren dat ze juist of fout beantwoord worden. Gemakkelijke vragen komen links te staan, moeilijke rechts.
+    </p>
+</div>
+
+<div class="column10 prefix1 topfix1">
+    <ul class="question-statistics">
+{% for question in questions %}
+    <li class="question" id="question-{{ question.question.id }}" style="margin-left: {{ (question.ratio * -320) - 160}}px">
+        <a href="{{ path('oat_oat_question_show', { 'id': question.question.id }) }}">
+            {{question.question.description}} - level: {{ question.question.level }}
+        </a>
+    </li>
+{% endfor %}
+</ul>
+</div>
+
+
+<script type="text/javascript">
+    function randomize()
+    {
+        
+        $('ul.question-statistics li').each(function(){
+            var newRatio = ((Math.random()*2) - 1);
+            var newMargin = (newRatio * -320) - 160;
+            $(this).css('margin-left', newMargin+'px');
+            //$(this).children('.ratio').html(newRatio);
+        });
+    }
+    
+    function updateQuestions(questions)
+    {
+        $.each(questions, function(i, question){
+            var newMargin = (question.ratio * -320) - 160;
+            $('#question-'+question.questionID).css('margin-left', newMargin+'px');
+        });
+    }
+    
+   (function getNewData(){
+    $.ajax({ url: "{{ path('oat_oat_statistics_questionjson') }}", success: function(questionRatios){
+        updateQuestions(questionRatios);
+    }, dataType: "json", complete: getNewData, timeout: 10000 });
+    })();
+    
+    
+</script>
+{% endblock %}

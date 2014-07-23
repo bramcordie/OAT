@@ -1,0 +1,132 @@
+{% extends "OATBundle::layout.html.twig" %}
+
+{% block scripts %}
+{{ parent() }}
+<script src="{{ asset('bundles/oat/scripts/raphael2.1-min.js') }}" type="text/javascript"></script>
+{% endblock %}
+
+{% block content %}
+<div class="column10 prefix1 topfix1">
+    <h2>Opleidingen</h2>
+{% if is_granted('ROLE_ADMIN') %}
+    <div class="admin-bar">
+        <a class="icon-link add-link" href="{{ path('oat_oat_questioncategory_creategroup') }}">opleiding toevoegen</a>
+    </div>
+{% endif %}
+</div>
+
+<div class="column10 prefix1 topfix1">
+{% for Group in CategoryGroups %}
+    <div class="column10 category-group" groupID="{{ Group.id }}">
+        <div class="column6">
+{% if is_granted('ROLE_ADMIN') %}
+        <h3><a href="{{ path('oat_oat_questioncategory_showgroup', { 'id': Group.id }) }}">{{ Group.name }}</a></h3>
+{% else %}
+        <h3>{{ Group.name }}</h3>
+{% endif %}
+            
+            <ul class="question-categories">
+    {% for Member in Group.questionCategoryGroupMember %}
+                <li>
+                    (<span class="value">{{ Member.targetScore }}</span>)
+                    <span class="name">{{ Member.questionCategory.name }}</span>
+                </li> 
+    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="column3 prefix1">
+                <div class="radarChart"></div>
+                <div class="piedarChart"></div>
+            </div>
+        </div>
+{% endfor %}
+        </div>
+        <script type="text/javascript">
+               Raphael.fn.piedarChart = function (cx, cy, r, values, labels) {
+               // don't draw a graph if there are less then 2 categories per group
+               if(values.length < 2){
+                    return;
+               }
+                var paper = this,
+                    rad = Math.PI / 180,
+                    levels = 4;
+                    chart = this.set();
+                    text = paper.set();
+                function sector(cx, cy, r, startAngle, endAngle, params) {
+                    var x1 = cx + r * Math.cos(-startAngle * rad),
+                        x2 = cx + r * Math.cos(-endAngle * rad),
+                        y1 = cy + r * Math.sin(-startAngle * rad),
+                        y2 = cy + r * Math.sin(-endAngle * rad);
+                    return paper.path(["M", cx, cy, "L", x1, y1, "A", r, r, 0, +(endAngle - startAngle > 180), 0, x2, y2, "z"]).attr(params);
+                }
+                var angle = 0,
+                    total = 0,
+                    start = .2,
+                    process = function (j) {
+                        var value = values[j],
+                            angleplus = (360 / values.length),
+                            popangle = angle + (angleplus / 2),
+                            color = Raphael.hsb(start, .50, 1),
+                            ms = 500,
+                            bcolor = Raphael.hsb(start, .75, .75),
+                            radius = (r / levels) * (value);
+                            p = sector(cx, cy, radius, angle, angle + angleplus, {fill: "90-" + bcolor + "-" + color, stroke: "none"}),
+                            txt = paper.text(cx + r * Math.cos(-popangle * rad), cy + r * Math.sin(-popangle * rad), labels[j])
+                            .attr({fill: "black", stroke: "none", opacity: 1, "font-size": 14, "font-family": "Asap" });
+                        angle += angleplus;
+                        chart.push(p);
+                        text.push(txt);
+                        start += .1;
+                    };
+                for (var i = 0, ii = values.length; i < ii; i++) {
+                    total += values[i];
+                }
+                for (i = 0; i < ii; i++) {
+                    process(i);
+                }
+        
+                for (var level = 0; level < levels; level++) 
+                {
+                    var radius = (r / levels) * (level + 1);
+                    chart.push(paper.circle(cx, cy, radius).attr({ stroke: "white" }));
+                }
+            
+                chart.insertBefore(text);
+                return chart;
+            };
+        
+            function initSideScroller(element){
+                var $sidebar   = element;
+                $window    = $(window),
+                offset     = $sidebar.offset(),
+                topPadding = 80;
+
+                $window.scroll(function() {
+                if ($window.scrollTop() > offset.top) {
+                    $sidebar.stop().animate({
+                        marginTop: $window.scrollTop() - offset.top + topPadding
+                    });
+                } else {
+                    $sidebar.stop().animate({
+                        marginTop: 40
+                    });
+                }
+                });
+            }
+
+                   $(document).ready(function () {
+                       //initSideScroller($("#category-scroller"));
+                   
+                       $(".category-group").each(function () {
+                           var values = [], labels = [];
+                           $("ul.question-categories li", this).each(function () {
+                               values.push(parseInt($(".value", this).text(), 10));
+                               labels.push($(".name", this).text());
+                           });
+                           Raphael($(".piedarChart", this)[0], 200, 200).piedarChart(100, 100, 70, values, labels);
+                       });
+                   });
+            </script>
+
+{% endblock %}

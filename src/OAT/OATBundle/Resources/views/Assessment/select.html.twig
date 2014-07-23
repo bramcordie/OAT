@@ -1,0 +1,41 @@
+{% extends "OATBundle::layout.html.twig" %}
+
+{% block content %}
+<div class="column10 prefix1 topfix1">
+    <h2>Start Bevraging</h2>
+
+    <h3>Volgens Opleiding(en)</h3>    <br>
+    <p><strong>Kies één of meerdere opleidingen</strong> waarin je geïntereseerd bent. Op deze manier kunnen we een selectie van vragen maken uit de categorieën die relevant zijn voor deze opleidingen.</p>
+    
+    <form action="{{ path('oat_oat_assessment_new') }}" method="post">
+    <ul class="categoryGroups" style="list-style: none;">
+    {% for categoryGroup in categoryGroups %}
+        <li>
+            <input id="category-group-{{ categoryGroup.id }}" type="checkbox" name="category-group-{{ categoryGroup.id }}" value="{{ categoryGroup.id }}">
+            <label for="category-group-{{ categoryGroup.id }}">{{ categoryGroup.name }}</label>
+        </li>
+    {% endfor %}
+    </ul>
+    
+    <input type="submit" id="categoryGroupSubmit" value="start opleiding bevraging"/>
+    </form>
+</div>
+
+<script type="text/javascript">
+    $(document).ready(function(){
+        $("#categoryGroupSubmit").attr("disabled", "disabled");
+        $(".categoryGroups input").prop("checked", false);
+    });
+    
+    $(".categoryGroups").change(function() {
+        var fields = $(".categoryGroups input:checked").serializeArray(); 
+        if (fields.length == 0) 
+          { 
+          $("#categoryGroupSubmit").attr("disabled", "disabled");
+          } else{
+          $("#categoryGroupSubmit").removeAttr("disabled");
+        }
+        
+    });
+</script>
+{% endblock %}

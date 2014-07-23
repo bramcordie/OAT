@@ -1,0 +1,80 @@
+{% extends "OATBundle::layout.html.twig" %}
+
+{% block content %}
+<div class="column10 prefix1 topfix1">
+    <h2>Bevraging Statistieken</h2>
+    <p>aantal voltooide bevragingen: {{ assessments | length }}</p>
+    
+    <h2>Categorie Statistieken</h2>
+    <br/>
+    <form method="post">
+        <div class="column3">
+            <label for="startDate">begin datum</label>
+            <br/>
+            <input class="statDate" type="text" id="startDate" name="startDate">
+        </div>
+            
+        <div class="column3 prefix1">
+            <label for="endDate">eind datum</label>
+            <br/>
+            <input class="statDate" type="text" id="endDate" name="endDate">
+        </div>
+        
+        <div class="column2 prefix1">
+            <input type="submit" value="Filter" />
+            <a href="{{ path('oat_oat_statistics_assessment') }}"> reset</a>
+        </div>
+    </form>
+    
+    <div class="category-levels">
+        {% if foundAssessments %}
+        <div class="category">
+        <div class="info">
+            <span class="name">Categorie</span><br/>
+            <span class="total">totaal</span>
+        </div> 
+            
+        {% for i in 0..3 %}
+        <div class="category-level-bar">
+            niveau {{ i }}
+       </div>
+       {% endfor %}
+       </div>
+            
+       {% for key in categoryLevels|keys if categoryLevels[key]['total'] > 0%}
+       <div class="category">
+           
+            <div class="info">
+                <span class="name"><a href="{{ path('oat_oat_questioncategory_show', { id: categoryLevels[key]['id'] }) }}">{{ key }}</a></span><br/>
+                <span class="total">{{ categoryLevels[key]['total'] }}</span>
+            </div> 
+
+            {% for i in 0..3 %}
+            {% set height = (categoryLevels[key][i] /categoryLevels[key]['total']) *50 %}
+            <div class="category-level-bar level{{ i }}" style="border-bottom: {{ height }}px solid silver; height: {{ 50 - height }}px">
+                {{ categoryLevels[key][i] }}
+            </div>
+            {% endfor %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <p>Geen bevragingen gevonden. Probeer met andere datums of <a href="{{ path('oat_oat_statistics_assessment') }}">reset</a> de filter.</p>
+    {% endif %}
+    </div>
+    
+</div>
+
+<script type="text/javascript">
+    $(function() {
+        $( ".statDate" ).datepicker({ dateFormat: "dd/mm/yy" });
+        
+        {% if startDate %}
+            $("#startDate").datepicker( "setDate" , '{{ startDate }}' );
+        {% endif %}
+            
+        {% if endDate %}
+            $("#endDate").datepicker( "setDate" , '{{ endDate }}' );
+        {% endif %}
+    });
+</script>
+{% endblock %}

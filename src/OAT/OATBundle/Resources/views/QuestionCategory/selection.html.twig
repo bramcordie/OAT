@@ -1,0 +1,9 @@
+{% extends "OATBundle::layout.html.twig" %}
+
+{% block content %}
+{{ assessments|length }}
+{% for assessment in assessments %}
+    {{ assessment.id }}
+{% endfor %}
+
+{% endblock %}

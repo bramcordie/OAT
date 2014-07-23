@@ -1,0 +1,16 @@
+{% extends "OATBundle::layout.html.twig" %}
+
+{% block content %}
+<div class="column10 prefix1 topfix1">
+    <h2>Vraag Categorieën</h2>
+    <div class="admin-bar">
+        <a class="icon-link add-link" href="{{ path('oat_oat_questioncategory_create') }}">categorie toevoegen</a>
+    </div>
+
+
+{% for Category in Categories %}
+    <h3><a href="{{ path('oat_oat_questioncategory_show', { id: Category.id }) }}">{{ Category.name }}</a></h3>
+    <p>#vragen: {{ Category.questions | length }}</p>
+{% endfor %}
+</div>
+{% endblock %}

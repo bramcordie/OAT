@@ -1,0 +1,19 @@
+{% extends "OATBundle::layout.html.twig" %}
+
+{% block content %}
+<div class="column10 prefix1 topfix1">
+    <h2>Afbeelding Uploaden</h2>
+    <form action="{{ path('oat_oat_question_mediaupload') }}" method="post" {{ form_enctype(form) }}>
+        {{ form_errors(form) }}
+        <div class="form-element">
+            {{ form_row(form.description) }}
+        </div>
+
+        <div class="form-element">
+            {{ form_row(form.file) }}
+        </div>
+        {{ form_rest(form) }}
+        <input type="submit" style="clear: both; float:left;" value="afbeelding uploaden" />
+    </form>
+    </div>
+{% endblock %}

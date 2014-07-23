@@ -1,0 +1,199 @@
+{% extends "OATBundle::layout.html.twig" %}
+
+{% block scripts %}
+{{ parent() }}
+<script src="{{ asset('bundles/oat/scripts/raphael2.1-min.js') }}" type="text/javascript"></script>
+{% endblock %}
+
+{% block content %}
+<div class="column5 prefix1 topfix1">
+    {% if Assessment.status == 1 %}
+        <h2>Resultaten Bevraging</h2>
+        <p>Bekijk hieronder je behaalde resultaten per categorie.</p>
+        <ul>
+        {% for category in Assessment.categoryAssessments %}
+
+                <li class="question-category">
+                    <h3><span class="name">{{ category.category.name }}</span> <span class="value">{{ category.level }}</span>/3</h3>
+                    {% if category.level == 0 %}
+                    <p>Je scoort ruim onvoldoende voor {{ category.category.name }}. De kans is groot dat dit beheersingsniveau niet volstaat om de opleiding succesvol te doorlopen. Deze score is daarom voor ons een indicatie om je op dit moment af te raden de opleiding Professionele bachelor in de biomedische laboratoriumtechnologie of Professionele bachelor in de voedings- en dieetkunde te starten.</p>
+                    {% endif %}
+                        
+                    {% if category.level == 1 %}
+                        <p>Je beheerst de basis voor {{ category.category.name }}, maar je haalt niet het vereiste minimumniveau. Het is mogelijk dat dit beheersingsniveau je studie zal belemmeren in de opleidingen Professionele bachelor in de biomedische laboratoriumtechnologie of Professionele bachelor in de voedings- en dieetkunde. Mits sterke motivatie en extra inzet (bijvoorbeeld via bijspijkercursussen tijdens semester 1), kan je niveau bijgewerkt worden. We raden je daarom aan deze toetsresultaten voor de aanvang van het academiejaar te bespreken met een medewerker van het StudieAdviesBureau (StAB) van het Departement Gezondheidszorg en Technologie van de KHLeuven.</p>
+                    {% endif %}
+                        
+                    {% if category.level == 2 %}
+                        <p>Je beheerst het vereiste minimumniveau voor {{ category.category.name }}, maar je haalt niet het uitbreidingsniveau. Je lijkt daarmee te beschikken over de nodige capaciteiten om te starten met de opleidingen Professionele bachelor in de biomedische laboratoriumtechnologie of Professionele bachelor in de voedings- en dieetkunde. Vergeet niet dat beide opleidingen sterk wetenschappelijk georiënteerd zijn en dat je dus nog een hele weg af te leggen hebt tot je het diploma behaalt. Veel succes!</p>
+                    {% endif %}
+                        
+                    {% if category.level == 3 %}
+                        <p>Knap resultaat - je beheerst het uitbreidingniveau voor {{ category.category.name }}. Je beschikt over de nodige capaciteiten om te starten met de opleidingen Professionele bachelor in de biomedische laboratoriumtechnologie of Professionele bachelor in de voedings- en dieetkunde. Vergeet niet dat inzet een noodzakelijke voorwaarde blijft om je capaciteiten te vertalen naar mooie studieresultaten. Veel succes!</p>
+                    {% endif %}
+                </li>
+
+        {% endfor %}
+            </ul>
+    {% else %}
+            <p>Je probeert de resultaten van een bevraging te bekijken die nog niet is afgewerkt.</p>
+    {% endif %}
+        </div>
+
+        <div class="column4 prefix1 topfix1">
+            <div class="piedarChart"></div>
+            <span class="myScore">Mijn Score</span>
+            <h3>Opleidingen</h3>
+            <p>Per opleiding is het aangeraden minimum niveau per categorie afgebeeld. Beweeg de muis over een opleiding om deze te laten oplichten.</p>
+            <ul class="categoryGroups">
+                {% for group in Assessment.questionCategoryGroups %}
+                <li>{{ group.name }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <script type="text/javascript">
+            Raphael.fn.radarChartList = function (cx, cy, r, catList, cats) {
+               var chart = this.set(),
+               paper = this,
+               levels = 4,
+               rad = Math.PI / 180;
+
+               for (var level = 0; level < levels; level++) {
+                   var radius = (r / levels) * (level + 1);
+                   chart.push(paper.circle(cx, cy, radius).attr({ stroke: "silver" }));
+               }
+
+               var catCount = cats.length;
+
+
+               for (var i = 0; i < catCount; i++){
+                   var endX = cx + r * Math.cos((360 / catCount) * (i + 1) * rad),
+                       endY = cy + r * Math.sin((360 / catCount) * (i + 1) * rad);
+                   chart.push(paper.path(["M", cx, cy, "L", endX, endY]).attr({ stroke: "grey" }));
+                   chart.push(paper.text(endX, endY, cats[i]).attr({ fill: "black", "font-size": 16 }));
+               };
+
+               var eduCount = 0;
+               var groups = [];
+               $.each(catList, function(group, levels) {
+                groups.push(levels);
+                eduCount++;
+                });
+
+               var  myScorePolygon,
+                    start = .2;
+               for (var eduCounter = 0; eduCounter < eduCount; eduCounter++){
+                   var points = [];
+                   for (var i = 0;i < catCount; i++) {
+                       var pX = cx + ((r / levels) * (groups[eduCounter][i]+1)) * Math.cos((360 / catCount) * (i + 1) * rad),
+                           pY = cy + ((r / levels) * (groups[eduCounter][i]+1)) * Math.sin((360 / catCount) * (i + 1) * rad);
+                       points.push(pX, pY);
+                   }
+                   ep = makePolygonPath(points);
+                   //var color = '#'+('00000'+(Math.random()*0xFFFFFF<<0).toString(16)).slice(-6);
+                   var color = Raphael.hsb(start, .50, 1);
+                   start += .2;
+                   if(eduCounter == 0){
+                       myScorePolygon = ep;
+                   }else{
+                       var pp = paper.path(ep).attr({"fill-opacity": 0.1, fill: color, opacity: 1, stroke: color, "stroke-width": 1 });
+                       pp.node.id = ("eduPath-"+eduCounter);
+                       $("ul.categoryGroups li:nth-child("+eduCounter+")").css("background-color",color);
+                       chart.push(pp);
+                   }
+               };
+               var color = Raphael.hsb(start, .50, 1);
+               var myScore = paper.path(myScorePolygon).attr({"fill-opacity": 0.25, fill: color, opacity: 1, stroke: color, "stroke-width": 1 });
+               $(".myScore").css("background-color",color);
+               myScore.node.id = ("eduPath-0");
+               chart.push(myScore);
+
+               return chart;
+            }
+            
+            
+            Raphael.fn.piedarChart = function (cx, cy, r, values, labels) {
+                    var paper = this,
+                        rad = Math.PI / 180,
+                        levels = 3;
+                        chart = this.set();
+                        text = paper.set();
+                    function sector(cx, cy, r, startAngle, endAngle, params) {
+                        var x1 = cx + r * Math.cos(-startAngle * rad),
+                            x2 = cx + r * Math.cos(-endAngle * rad),
+                            y1 = cy + r * Math.sin(-startAngle * rad),
+                            y2 = cy + r * Math.sin(-endAngle * rad);
+                        return paper.path(["M", cx, cy, "L", x1, y1, "A", r, r, 0, +(endAngle - startAngle > 180), 0, x2, y2, "z"]).attr(params);
+                    }
+                    var angle = 0,
+                        total = 0,
+                        start = .2,
+                        process = function (j) {
+                            var value = values[j],
+                                angleplus = (360 / values.length),
+                                popangle = angle + (angleplus / 2),
+                                color = Raphael.hsb(start, .50, 1),
+                                ms = 500,
+                                bcolor = Raphael.hsb(start, .75, .75),
+                                radius = (r / levels) * (value);
+                                p = sector(cx, cy, radius, angle, angle + angleplus, {fill: "90-" + bcolor + "-" + color, stroke: "none"}),
+                                txt = paper.text(cx + r * Math.cos(-popangle * rad), cy + r * Math.sin(-popangle * rad), labels[j])
+                                .attr({fill: "black", stroke: "none", opacity: 1, "font-size": 14, "font-family": "Asap" });
+                            angle += angleplus;
+                            chart.push(p);
+                            text.push(txt);
+                            start += .1;
+                        };
+                    for (var i = 0, ii = values.length; i < ii; i++) {
+                        total += values[i];
+                    }
+                    for (i = 0; i < ii; i++) {
+                        process(i);
+                    }
+        
+                    for (var level = 0; level < levels; level++) 
+                    {
+                        var radius = (r / levels) * (level + 1);
+                        chart.push(paper.circle(cx, cy, radius).attr({ stroke: "white" }));
+                    }
+            
+                    chart.insertBefore(text);
+                    return chart;
+                };
+                
+            function makePolygonPath(points) {
+                var convertedPath = points.toString().replace(/([0-9.]+),([0-9.]+)/g, function ($0, x, y) {
+                    return 'L ' + Math.floor(x) + ',' + Math.floor(y) + ' ';
+                }).replace(/^L/, 'M').concat("z");
+                return convertedPath;
+            }
+
+           $(document).ready(function () {
+               var values = [], labels = [];
+               $(".question-category").each(function () {
+                   values.push(parseInt($(".value", this).text(), 10));
+                   labels.push($(".name", this).text());
+               });
+               
+               {% autoescape false %}
+               var RadarData = {{ radarData|json_encode() }};
+               var Cats = {{ Assessment.categoryNames|json_encode() }};
+               {% endautoescape %}
+               //Raphael($(".piedarChart")[0], 200, 200).piedarChart(100, 100, 70, values, labels);
+               Raphael($(".piedarChart")[0], 320, 320).radarChartList(160, 160, 120, RadarData, Cats);
+               
+               $("ul.categoryGroups li").hover( 
+           function(){
+               var pathid = "#eduPath-" + ($("ul.categoryGroups li").index($(this))+1);
+               $(pathid).attr("stroke-width", "3");
+               $(pathid).css("stroke-width", "3");
+           },
+           function(){
+               var pathid = "#eduPath-" + ($("ul.categoryGroups li").index($(this))+1);
+               $(pathid).attr("stroke-width", "1");
+               $(pathid).css("stroke-width", "1");
+           }
+       );
+           });
+            </script>
+{% endblock %}

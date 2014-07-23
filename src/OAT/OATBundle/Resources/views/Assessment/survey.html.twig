@@ -1,0 +1,66 @@
+{% extends "OATBundle::layout.html.twig" %}
+
+{% block content %}
+<div class="column10 prefix1 topfix1">
+    <h2>Enquête invullen</h2>
+    <p>Voor je de resultaten van de bevraging bekijkt, willen we je wat vragen stellen.</p>
+    {{ form_errors(form) }}
+
+    <form action="{{ path('oat_oat_assessment_survey', { 'assessmentID': assessmentID }) }}" method="post" {{ form_enctype(form) }}>  
+    
+    <div class="form-element">
+        <label for="form_studentName">Naam<span style="color: red">*</span></label>
+        {{ form_errors(form.studentName) }}
+        {{ form_widget(form.studentName) }}
+    </div>  
+        
+    <div class="form-element">
+        <label for="form_schoolName">Naam van de school</label>
+        {{ form_errors(form.schoolName) }}
+        {{ form_widget(form.schoolName) }}
+    </div>    
+    
+    <div class="form-element">
+        <label for="form_educationType">Opleiding</label>
+        {{ form_errors(form.educationType) }}
+        {{ form_widget(form.educationType) }}
+    </div>
+        
+    <div class="form-element">
+        <label for="form_education">Studierichting</label>
+        {{ form_errors(form.education) }}
+        {{ form_widget(form.education) }}
+    </div>
+        
+    <div class="form-element">
+        <label for="form_hoursMaths">Aantal uren wiskunde laatste jaar secundair onderwijs</label>
+        {{ form_errors(form.hoursMaths) }}
+        {{ form_widget(form.hoursMaths) }}
+    </div>
+        
+    <div class="form-element">
+        <label for="form_hoursScience">Aantal uren wetenschappen laatste jaar secundair onderwijs(Natuurwetenschappen of de som van Bio, Chemie, Fysica)</label>
+        {{ form_errors(form.hoursScience) }}
+        {{ form_widget(form.hoursScience) }}
+    </div>
+        
+    <div class="form-element">
+        <label for="form_futureEducation">Voor welke opleiding wens je je in te schrijven?</label>
+        {{ form_errors(form.futureEducation) }}
+        {{ form_widget(form.futureEducation) }}
+    </div>
+    
+    <div class="form-element">
+        <label for="form_startingYear">In welk academiejaar wens je te starten aan de KHLeuven?</label>
+        {{ form_errors(form.startingYear) }}
+        {{ form_widget(form.startingYear) }}
+    </div>
+
+    {{ form_rest(form) }}
+    <div class="form-element">
+        <input type="submit" value="resultaten tonen"/>
+    </div>
+    </form>
+    <span style="display: block; clear: both; font-size: 0.85em;"><span style="color: red;">*</span>laat dit veld open om de enquête anoniem te verzenden</span>
+</div>
+{% endblock %}
