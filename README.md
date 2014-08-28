@@ -1,147 +1,262 @@
-Symfony Standard Edition
-========================
+# Reviewing my first Symfony2 project
 
-Welcome to the Symfony Standard Edition - a fully-functional Symfony2
-application that you can use as the skeleton for your new app. If you want
-to learn more about the features included, see the "What's Inside?" section.
+## History
+About 2 years ago, I built my first Symfony2 project. The most recent version
+ back then was 2.0.12 which I figured out from the now deprecated _/deps_
+ file.
 
-This document contains information on how to download and start using Symfony.
-For a more detailed explanation, see the
-[Installation chapter](http://symfony.com/doc/current/book/installation.html)
-of the Symfony Documentation.
+```
+[symfony]
+    git=http://github.com/symfony/symfony.git
+    version=v2.0.12
+```
 
-1) Download the Standard Edition
---------------------------------
+This project was part of my internship where I was given a LAMP stack to deploy
+ on. I chose Symfony because of the resemblance with __ASP.NET MVC__ which I used
+ on a previous project and enjoyed working with.
 
-If you've already downloaded the standard edition, and unpacked it somewhere
-within your web root directory, then move on to the "Installation" section.
+## Deployment
+I used SVN before but I wasn't familiar with GIT. The project was under version
+ control but the only version I found is the zip file I handed over at the
+ end of my internship.
 
-To download the standard edition, you have two options:
+If this project requires further development, it would be a good idea to put
+ it under version control. The vendor folder can be excluded together with
+ the nbproject that somehow snuck into the zip file. Because _2.0_ lacks
+ composer, the command to install vendors is different from what I'm used to
+ but the workflow stays the same: `php bin/vendors install`
 
-### Download an archive file (*recommended*)
+I had to download the missing _.gitignore_ file from the symfony-standard
+ repository. After running `git init; git add .` in the root of the project,
+ further changes can be tracked.
 
-The easiest way to get started is to download an archive of the standard edition
-(http://symfony.com/download). Unpack it somewhere under your web server root
-directory and you're done. The web root is wherever your web server (e.g. Apache)
-looks when you access `http://localhost` in a browser.
+After changing the _/app/config/parameters.ini_ file, creating the database
+ and running `php app/console doctrine:schema:update --force`, the project is
+ available in my local development environment. The Apache and PHP config that I
+ use for more recent projects seems to do the job, no tweaking required. Just to
+ be sure, I checked _/web/config.php_, it did not complain.
 
-### Clone the git Repository
+## The Application
+### Missing data
+Clicking through the website I ran into the following errors:
 
-We highly recommend that you download the packaged version of this distribution.
-But if you still want to use Git, you are on your own.
+- There are no questions!
+- Can't find any question catergories!
 
-Run the following commands:
+Other pages just show a blank area where a list of options should appear. For
+ example: when starting an assessment you should be able to pick an _opleiding_
+ but none are presented.
 
-    git clone http://github.com/symfony/symfony-standard.git
-    cd symfony-standard
-    rm -rf .git
+There are 2 measures we can take to counter these issues.
 
-2) Installation
----------------
+First of all, showing sensible messages when data is missing to properly render
+ views. Depending on the role of the user and their ability to add content, you
+ can point them in the right direction and guide them through their first
+ encounter with the application.
 
-Once you've downloaded the standard edition, installation is easy, and basically
-involves making sure your system is ready for Symfony.
+A second solution is seeding the project with the help of Doctrine fixtures.
+ These fixtures can be run on command so they are extremely helpful if you mess
+ up your data or you quickly need the dummy content.
 
-### a) Check your System Configuration
+### Bulky controllers
+The controllers in this project ended up being quite bulky. Looking back, they
+ provide plenty of examples where improvements can be made.
 
-Before you begin, make sure that your local system is properly configured
-for Symfony. To do this, execute the following:
+#### Form classes
+Instead of defining forms inside the controller they can be defined in separate
+ form classes that can directly map to existing model entities or view models.
+ This way we can consolidate duplicate code in controllers and compose more
+ elaborate forms by combining different form classes.
 
-    php app/check.php
+#### Repositories
+Another way of keeping controllers dry is creating custom repository classes to
+ persist and retrieve entities.
 
-If you get any warnings or recommendations, fix these now before moving on.
+The following controller action code looks for all assessments created between
+ a begin and end date.
 
-### b) Install the Vendor Libraries
+```php
+<?php
+// src/OAT/OATBundle/Controller/StatisticsController.php
 
-If you downloaded the archive "without vendors" or installed via git, then
-you need to download all of the necessary vendor libraries. If you're not
-sure if you need to do this, check to see if you have a ``vendor/`` directory.
-If you don't, or if that directory is empty, run the following:
+public function assessmentAction()
+{
+  ...
+  $categoryAssessments = $this->getDoctrine()
+    ->getRepository('OATBundle:CategoryAssessment')
+    ->createQueryBuilder('c')
+    ->where("c.status = 1")
+    ->andWhere("c.created <= :endDate")
+    ->andWhere("c.created >= :startDate")
+    ->setParameters(array('startDate' => $startDate, 'endDate' => $endDate))
+    ->getQuery()
+    ->getResult();
+  ...
+}
+```
 
-    php bin/vendors install
+This Query can be moved to a repository class where we define it as a function.
 
-Note that you **must** have git installed and be able to execute the `git`
-command to execute this script. If you don't have git available, either install
-it or download Symfony with the vendor libraries already included.
+```php
+<?php
+// src/OAT/OATBundle/Entity/AssessmentRepository.php
+class AssessmentRepository extends EntityRepository
+{
+    public function findAllByTimespan($startDate, $endDate){
+        ...
+    }
+}
+```
 
-### c) Access the Application via the Browser
+We can then replace the query in the controller action with the repository
+ function.
 
-Congratulations! You're now ready to use Symfony. If you've unzipped Symfony
-in the web root of your computer, then you should be able to access the
-web version of the Symfony requirements check via:
+```php
+<?php
+// src/OAT/OATBundle/Controller/StatisticsController.php
+public function assessmentAction()
+{
+  ...
+  $categoryAssessments = $this->getDoctrine()
+    ->getRepository('OATBundle:CategoryAssessment')
+    ->findAllByTimespan($startDate, $endDate);
+  ...
+}
+```
 
-    http://localhost/Symfony/web/config.php
+#### Keep domain logic inside the model
+The following controller action code takes a list of category groups, which
+ can contain overlapping categories, matches them against a list of all the
+ existing categories and builds a set with unique categories to create an
+ assessment.
 
-If everything looks good, click the "Bypass configuration and go to the Welcome page"
-link to load up your first Symfony page.
+```php
+<?php
+// src/OAT/OATBundle/Controller/AssessmentController.php newAction
+$categories = Array();
 
-You can also use a web-based configurator by clicking on the "Configure your
-Symfony Application online" link of the ``config.php`` page.
+$categoryGroups = $this->getDoctrine()
+  ->getRepository('OATBundle:QuestionCategoryGroup')
+  ->findAll();
 
-To see a real-live Symfony page in action, access the following page:
+$selectedGroups = Array();
 
-    web/app_dev.php/demo/hello/Fabien
+foreach($categoryGroups as $categoryGroup)
+{
+  if($request->request->get('category-group-'.$categoryGroup->getId())) {
+    $selectedGroups[] = $categoryGroup;
+    foreach($categoryGroup->getQuestionCategoryGroupMember() as $category)
+    {
+      if(!in_array($category->getQuestionCategory(), $categories)) {
+          $categories[] = $category->getQuestionCategory();
+      }
+    }
+  }
+}
+```
 
-3) Learn about Symfony!
------------------------
+You don't want the repository call and http request logic to end up in the model.
+ The following code will match the requested group IDs against existing
+ category groups.
 
-This distribution is meant to be the starting point for your application,
-but it also contains some sample code that you can learn from and play with.
+```php
+<?php
+// src/OAT/OATBundle/Controller/AssessmentController.php
+private function getRequestedCategoryGroupIds(Request $request) {
+  // Get all the posted variables
+  $postedVariables = $request->request->all();
 
-A great way to start learning Symfony is via the [Quick Tour](http://symfony.com/doc/current/quick_tour/the_big_picture.html),
-which will take you through all the basic features of Symfony2 and the test
-pages that are available in the standard edition.
+  // There's a post variable prefixed with 'category-group-' for each category group
+  // You can't filter on key so the array must be flipped.
+  $postedCategoryGroups = array_filter(array_flip($postedVariables), function($key) {
+    return strpos($key, 'category-group-') === 0;
+  });
 
-Once you're feeling good, you can move onto reading the official
-[Symfony2 book](http://symfony.com/doc/current/).
+  // Strip the group IDs
+  $categoryGroupIds = array_map(function($value) {
+    return intval(str_replace("category-group-", "", $value));
+  }, $postedCategoryGroups);
 
-Using this Edition as the Base of your Application
---------------------------------------------------
+  return $categoryGroupIds;
+}
 
-Since the standard edition is fully-configured and comes with some examples,
-you'll need to make a few changes before using it to build your application.
+public function newAction(Request $request) {
+  $categoryGroupIds = $this->getRequestedCategoryGroupIds($request);
 
-The distribution is configured with the following defaults:
+  // Find the matching group entities
+  $categoryGroups = $this->getDoctrine()
+    ->getRepository('OATBundle:QuestionCategoryGroup')
+    ->findById($categoryGroupIds);
+  ...
+}
 
-* Twig is the only configured template engine;
-* Doctrine ORM/DBAL is configured;
-* Swiftmailer is configured;
-* Annotations for everything are enabled.
+```
 
-A default bundle, ``AcmeDemoBundle``, shows you Symfony2 in action. After
-playing with it, you can remove it by following these steps:
+Further down in the action, the category groups are added after the assessment
+ object is created. Instead of just passing the groups to the constructor, all
+ their categories were reduced to a set to use as parameter.
 
-* delete the ``src/Acme`` directory;
-* remove the routing entries referencing AcmeBundle in ``app/config/routing_dev.yml``;
-* remove the AcmeBundle from the registered bundles in ``app/AppKernel.php``;
+```php
+<?php
+// src/OAT/OATBundle/Controller/AssessmentController.php
+$assessment = new Assessment($categories);
+$assessment->setCreated(new DateTime("now"));
+foreach($selectedGroups as $group)
+{
+  $assessment->addQuestionCategoryGroup($group);
+}
+```
 
-What's inside?
----------------
-The Symfony Standard Edition comes pre-configured with the following bundles:
+You should be able to create an assessment by passing the groups and let
+ the constructor deal with them. The model should decide if duplicate categories
+ are allowed without involving the controller for any domain logic.
 
-* **FrameworkBundle** - The core Symfony framework bundle
-* **SensioFrameworkExtraBundle** - Adds several enhancements, including template
-  and routing annotation capability ([documentation](http://symfony.com/doc/current/bundles/SensioFrameworkExtraBundle/index.html))
-* **DoctrineBundle** - Adds support for the Doctrine ORM
-  ([documentation](http://symfony.com/doc/current/book/doctrine.html))
-* **TwigBundle** - Adds support for the Twig templating engine
-  ([documentation](http://symfony.com/doc/current/book/templating.html))
-* **SecurityBundle** - Adds security by integrating Symfony's security component
-  ([documentation](http://symfony.com/doc/current/book/security.html))
-* **SwiftmailerBundle** - Adds support for Swiftmailer, a library for sending emails
-  ([documentation](http://symfony.com/doc/2.0/cookbook/email.html))
-* **MonologBundle** - Adds support for Monolog, a logging library
-  ([documentation](http://symfony.com/doc/2.0/cookbook/logging/monolog.html))
-* **AsseticBundle** - Adds support for Assetic, an asset processing library
-  ([documentation](http://symfony.com/doc/2.0/cookbook/assetic/asset_management.html))
-* **JMSSecurityExtraBundle** - Allows security to be added via annotations
-  ([documentation](http://symfony.com/doc/current/bundles/JMSSecurityExtraBundle/index.html))
-* **WebProfilerBundle** (in dev/test env) - Adds profiling functionality and
-  the web debug toolbar
-* **SensioDistributionBundle** (in dev/test env) - Adds functionality for configuring
-  and working with Symfony distributions
-* **SensioGeneratorBundle** (in dev/test env) - Adds code generation capabilities
-  ([documentation](http://symfony.com/doc/current/bundles/SensioGeneratorBundle/index.html))
-* **AcmeDemoBundle** (in dev/test env) - A demo bundle with some example code
+```php
+<?php
+// src/OAT/OATBundle/Entity/Assessment.php
+/**
+ * @param QuestionCategoryGroup[] $groups
+ */
+public function __construct(Array $groups)
+{
+  ...
+  foreach ($groups as $group) {
+    $this->addQuestionCategoryGroup($group);
+  }
+  ...
+}
 
-Enjoy!
+public function addQuestionCategoryGroup(QuestionCategoryGroup $group)
+{
+  $this->questionCategoryGroups[] = $group;
+
+  foreach($group->getQuestionCategoryGroupMembers() as $categoryGroupMember) {
+    $this->addQuestionCategory($categoryGroupMember->getQuestionCategory());
+  }
+}
+
+public function addQuestionCategory(QuestionCategory $category)
+{
+  if(!in_array($this->getQuestionCategories(), $category) {
+    $this->questionCategories[] = $category;
+  };
+}
+```
+
+### Managing Dependencies
+#### Back-end
+Switching to __Composer__ would make it easier to manage security updates. This
+ requires updating Symfony to at least _v2.1_. Going for _v2.3_ will get you
+ long-term support and makes sure you are only running stable versions of external
+ dependencies. This project does not rely heavily on third-party bundles so upgrading
+ should not be that hard by following the [Symfony upgrade guide](https://github.com/symfony/symfony/blob/master/UPGRADE-2.1.md).
+
+#### Front-end
+Javascript libraries are stored in the OAT bundle. This creates unneeded bloat
+ in the repository and requires you to downloaded and add them manually.
+
+ For more recent projects I'm using [Bower](http://bower.io/) and it makes
+ developing with small javascript libraries so much easier. You can copy over a
+ list of dependencies from existing projects and running `bower install` will
+ get the locally cached files or download them when needed. Assetic can still be
+ used to minify everything to a single file.
